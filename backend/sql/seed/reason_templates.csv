@@ -1,0 +1,13 @@
+template_id,target_type,target_key,target_value,text
+R001,attribute,scent_level,none,香りなし・好みに左右されにくい
+R002,attribute,preference_dependency,low,好みに左右されにくい定番品
+R003,attribute,preference_dependency,mid,好みが分かれにくい
+R004,attribute,workplace_friendly,1,常温・持ち帰りやすく職場で渡しやすい
+R005,attribute,sobetsu_orders,any,送別で選ばれている（直近1年{n}件）
+R006,attribute,rating,any,評価{r}（{n}件）
+R007,attribute,style,standard,定番で外しにくい
+R008,attribute,style,unique,人と被りにくい個性のある品
+C001,caution,food_taste,any,味の好みは要確認
+C002,caution,scent_weak,any,ほのかな香りあり
+C003,caution,short_shelf_life,any,日持ちは{days}日（早めに渡す）
+C004,caution,carry_medium,any,持ち帰りに紙袋が必要な大きさ
