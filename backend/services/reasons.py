@@ -27,7 +27,8 @@ def reason_for(factor: str, p: dict) -> str | None:
     """要素ごとに、商品の属性値から定型文を選ぶ。"""
     if factor == "preference":
         # 香りなし を優先し、無ければ好みへの依存度で言う
-        if p.get("scent_level") == "none":
+        # 「好みに左右されにくい」と言うのは、依存度が low と分かっている商品だけ（属性と矛盾させないため）
+        if p.get("scent_level") == "none" and p.get("preference_dependency") == "low":
             return _text("attribute", "scent_level", "none")
         return _text("attribute", "preference_dependency", p.get("preference_dependency"))
     if factor == "workplace":
@@ -36,6 +37,9 @@ def reason_for(factor: str, p: dict) -> str | None:
         t = _text("attribute", "sobetsu_orders", "any")
         return t.format(n=p.get("sobetsu_orders") or 0) if t else None
     if factor == "rating":
+        # レビューが無い商品は、評価を理由にしない（「評価None（0件）」と表示されるのを防ぐ）
+        if not p.get("review_count") or p.get("rating") is None:
+            return None
         t = _text("attribute", "rating", "any")
         return t.format(r=p.get("rating"), n=p.get("review_count") or 0) if t else None
     if factor == "style":
@@ -69,4 +73,10 @@ def build_reasons(p: dict, values: dict, contrib: dict) -> tuple[list[str], str 
             reasons.append(text)
         if len(reasons) == 2:
             break
+    if not reasons:
+        # どの要素も理由にできなかった候補にも、必ず1つは理由を出す（FR-6）。
+        # 候補はすべて「送別タグ付き・予算内」で取っている（FR-3）ので、どの候補にも当てはまる事実を使う
+        fallback = _text("attribute", "scene_budget", "any")
+        if fallback:
+            reasons.append(fallback)
     return reasons, caution_for(p)

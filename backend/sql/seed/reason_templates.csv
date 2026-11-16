@@ -7,6 +7,7 @@ R005,attribute,sobetsu_orders,any,送別で選ばれている（直近1年{n}件
 R006,attribute,rating,any,評価{r}（{n}件）
 R007,attribute,style,standard,定番で外しにくい
 R008,attribute,style,unique,人と被りにくい個性のある品
+R009,attribute,scene_budget,any,送別向けで予算内の品
 C001,caution,food_taste,any,味の好みは要確認
 C002,caution,scent_weak,any,ほのかな香りあり
 C003,caution,short_shelf_life,any,日持ちは{days}日（早めに渡す）
