@@ -1,0 +1,93 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f3355;
+}
+
+.select {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 16px;
+  color: #222;
+  background: #fff;
+  border: 1px solid #d6d0c4;
+  border-radius: 8px;
+}
+
+.select:focus {
+  outline: 2px solid #1f3355;
+  outline-offset: 1px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.perPerson {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #eef1f6;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+}
+
+.perPersonLabel {
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.perPersonValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f3355;
+}
+
+.button {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  background: #1f3355;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #2b4573;
+}
+
+.button:disabled {
+  background: #b8b8b8;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: -8px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: #6b6b6b;
+}
+
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
