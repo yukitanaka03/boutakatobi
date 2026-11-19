@@ -12,3 +12,4 @@ C001,caution,food_taste,any,味の好みは要確認
 C002,caution,scent_weak,any,ほのかな香りあり
 C003,caution,short_shelf_life,any,日持ちは{days}日（早めに渡す）
 C004,caution,carry_medium,any,持ち帰りに紙袋が必要な大きさ
+R010,attribute,scent_level,none_only,香りなし

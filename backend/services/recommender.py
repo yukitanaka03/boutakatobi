@@ -20,6 +20,9 @@ MIN_SHELF_LIFE_DAYS = 14
 RATING_PRIOR_COUNT = 20
 DEFAULT_LIMIT = 3
 MAX_LIMIT = 5
+# 上位に同じカテゴリーが並ぶと比べようがない（実データでは No.1 の上位5件がすべてタオルになった）。
+# 1カテゴリーはこの件数までにし、足りないときだけ残りで埋める（要求 A-1「数点に絞って比較できる」）
+MAX_PER_CATEGORY = 2
 
 # 属性の値 → 0〜1 の点（1が「外れにくい」）
 PREFERENCE_POINTS = {"low": 1.0, "mid": 0.5, "high": 0.0}   # 好みへの依存度
@@ -126,7 +129,7 @@ def score_candidates(candidates: list[dict], cond: dict) -> list[dict]:
     for p in candidates:
         values = factor_values(p, cond, ctx)
         contrib = {k: weights[k] * v for k, v in values.items()}
-        reasons, caution = build_reasons(p, values, contrib)
+        reasons, caution = build_reasons(p, values, contrib, cond["handover"])
         scored.append({**p, "score": round(sum(contrib.values()), 4), "contributions": contrib,
                        "reasons": reasons, "caution": caution})
     # 同点なら、送別での購入数が多い方 → 商品IDの順（毎回同じ順位にするため）
@@ -134,16 +137,29 @@ def score_candidates(candidates: list[dict], cond: dict) -> list[dict]:
     return scored
 
 
+def diversify(ranked: list[dict], limit: int) -> list[dict]:
+    """スコア順を保ったまま、1カテゴリー MAX_PER_CATEGORY 件までで limit 件選ぶ。足りなければ残りから順に足す。"""
+    picked, per_cat = [], {}
+    for p in ranked:
+        if per_cat.get(p.get("category"), 0) < MAX_PER_CATEGORY:
+            picked.append(p)
+            per_cat[p.get("category")] = per_cat.get(p.get("category"), 0) + 1
+        if len(picked) == limit:
+            return picked
+    rest = [p for p in ranked if p not in picked]
+    return picked + rest[: limit - len(picked)]
+
+
 def recommend(cond: dict, fetch=fetch_candidates) -> dict:
     """FR-3・FR-4・FR-6 をまとめて実行する。fetch を差し替えると、DBなしで動かせる（テスト用）。"""
     limit = min(max(int(cond.get("limit") or DEFAULT_LIMIT), 1), MAX_LIMIT)
     candidates = fetch(cond["total_budget"])
     kept, applied = filter_candidates(candidates, cond)
-    ranked = score_candidates(kept, cond)
+    ranked = diversify(score_candidates(kept, cond), limit)
     return {
         "per_person_budget": cond["total_budget"] // max(cond["num_givers"], 1),
         "applied_exclusions": applied,
         "candidate_count": len(kept),
         "episode_used": bool(cond.get("theme_ids")),
-        "results": ranked[:limit],
+        "results": ranked,
     }

@@ -30,7 +30,14 @@ def reason_for(factor: str, p: dict) -> str | None:
         # 「好みに左右されにくい」と言うのは、依存度が low と分かっている商品だけ（属性と矛盾させないため）
         if p.get("scent_level") == "none" and p.get("preference_dependency") == "low":
             return _text("attribute", "scent_level", "none")
-        return _text("attribute", "preference_dependency", p.get("preference_dependency"))
+        if p.get("preference_dependency") == "low":
+            return _text("attribute", "preference_dependency", "low")
+        # 依存度が mid 以上の商品に「好みが分かれにくい」と言うと、注意点（味の好みは要確認）と矛盾する。
+        # 香りが無いことだけは事実として言える
+        # 食品・飲料の「香りなし」は意味が違う（コーヒーの香りは外れる理由にならない）ので、雑貨・コスメなどだけ
+        if p.get("scent_level") == "none" and p.get("category") not in ("食品", "飲料"):
+            return _text("attribute", "scent_level", "none_only")
+        return None
     if factor == "workplace":
         return _text("attribute", "workplace_friendly", 1)
     if factor == "sales":
@@ -47,13 +54,13 @@ def reason_for(factor: str, p: dict) -> str | None:
     return None   # episode は来週（テーマの文言は target_type=theme で足す）
 
 
-def caution_for(p: dict) -> str | None:
-    """気をつける点を1つだけ選ぶ。上から順に、当てはまった最初のもの。"""
+def caution_for(p: dict, handover: str = "hand") -> str | None:
+    """気をつける点を1つだけ選ぶ。上から順に、当てはまった最初のもの。持ち帰りの注意は手渡しのときだけ。"""
     checks = [
         (p.get("preference_dependency") == "mid" and p.get("shelf_life_days") is not None, "food_taste"),
         (p.get("scent_level") == "weak", "scent_weak"),
         (p.get("shelf_life_days") is not None and p["shelf_life_days"] < 30, "short_shelf_life"),
-        (p.get("carry_size") == "medium", "carry_medium"),
+        (handover == "hand" and p.get("carry_size") == "medium", "carry_medium"),
     ]
     for hit, key in checks:
         if hit:
@@ -62,7 +69,7 @@ def caution_for(p: dict) -> str | None:
     return None
 
 
-def build_reasons(p: dict, values: dict, contrib: dict) -> tuple[list[str], str | None]:
+def build_reasons(p: dict, values: dict, contrib: dict, handover: str = "hand") -> tuple[list[str], str | None]:
     """理由（最大2つ）と注意点（最大1つ）を返す。"""
     order = sorted((k for k in contrib if contrib[k] > 0 and values[k] >= THRESHOLD),
                    key=lambda k: -contrib[k])
@@ -79,4 +86,4 @@ def build_reasons(p: dict, values: dict, contrib: dict) -> tuple[list[str], str 
         fallback = _text("attribute", "scene_budget", "any")
         if fallback:
             reasons.append(fallback)
-    return reasons, caution_for(p)
+    return reasons, caution_for(p, handover)

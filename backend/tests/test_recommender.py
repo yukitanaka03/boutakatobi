@@ -137,3 +137,41 @@ class TestKnowledge(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRealDataFindings(unittest.TestCase):
+    """実データ（送別上位163商品）で流して見つかった問題の再発防止"""
+
+    def test_同じカテゴリーは2件までで残りは別カテゴリーから(self):
+        towels = [item(f"W{i}", f"タオル{i}", 4000, sobetsu_orders=100 - i) for i in range(5)]
+        sweets = [item("F1", "焼き菓子", 4000, category="食品", preference_dependency="mid",
+                       shelf_life_days=60, individually_wrapped=1, sobetsu_orders=10)]
+        out = recommend(dict(NO1, limit=3), fetch=fake_fetch(towels + sweets))
+        cats = [r["category"] for r in out["results"]]
+        self.assertEqual(cats.count("生活雑貨"), 2)
+        self.assertIn("食品", cats)
+
+    def test_候補が1カテゴリーしか無ければそのカテゴリーで埋める(self):
+        towels = [item(f"W{i}", f"タオル{i}", 4000) for i in range(5)]
+        out = recommend(dict(NO1, limit=3), fetch=fake_fetch(towels))
+        self.assertEqual(len(out["results"]), 3)
+
+    def test_配送なら持ち帰りの注意は出ない(self):
+        bath = item("B1", "バスタオルセット", 4000, carry_size="medium")
+        hand = recommend(NO1, fetch=fake_fetch([bath]))["results"][0]
+        ship = recommend(dict(NO1, handover="ship"), fetch=fake_fetch([bath]))["results"][0]
+        self.assertEqual(hand["caution"], "持ち帰りに紙袋が必要な大きさ")
+        self.assertIsNone(ship["caution"])
+
+    def test_味の好みに注意がある商品に好みの理由を出さない(self):
+        sweets = item("F1", "焼き菓子", 4000, category="食品", preference_dependency="mid",
+                      shelf_life_days=60, individually_wrapped=1)
+        r = recommend(dict(NO1, preference_knowledge="mid"), fetch=fake_fetch([sweets]))["results"][0]
+        self.assertEqual(r["caution"], "味の好みは要確認")
+        self.assertNotIn("好みが分かれにくい", r["reasons"])
+        self.assertTrue(all("好み" not in t for t in r["reasons"]))
+
+    def test_食品と飲料には香りなしを理由にしない(self):
+        coffee = item("D1", "ドリップバッグ", 3500, category="飲料", preference_dependency="mid", shelf_life_days=180)
+        r = recommend(NO1, fetch=fake_fetch([coffee]))["results"][0]
+        self.assertTrue(all("香り" not in t for t in r["reasons"]))
