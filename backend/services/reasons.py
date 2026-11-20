@@ -49,8 +49,13 @@ def reason_for(factor: str, p: dict) -> str | None:
             return None
         t = _text("attribute", "rating", "any")
         return t.format(r=p.get("rating"), n=p.get("review_count") or 0) if t else None
-    if factor == "style":
-        return _text("attribute", "style", p.get("style"))
+    if factor == "standard":
+        # 定番でも、好みが分かれる商品や香りが強い商品に「外しにくい」とは言えない
+        if p.get("preference_dependency") == "high" or p.get("scent_level") == "strong":
+            return None
+        return _text("attribute", "style", "standard")
+    if factor == "unique":
+        return _text("attribute", "style", "unique")
     return None   # episode は来週（テーマの文言は target_type=theme で足す）
 
 

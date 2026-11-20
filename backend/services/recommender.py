@@ -87,7 +87,7 @@ def filter_candidates(candidates: list[dict], cond: dict) -> tuple[list[dict], l
 
 # ── 3. 順位付け ─────────────────────────────────────────
 def factor_values(p: dict, cond: dict, ctx: dict) -> dict:
-    """1商品の6要素を、それぞれ 0〜1 の点にする。1 が「その要素で見て外れにくい」。"""
+    """1商品の7要素を、それぞれ 0〜1 の点にする（要件定義書 6.2）。"""
     pref = PREFERENCE_POINTS.get(p.get("preference_dependency"), 0.5)
     scent = SCENT_POINTS.get(p.get("scent_level"), 0.5)
 
@@ -101,9 +101,6 @@ def factor_values(p: dict, cond: dict, ctx: dict) -> dict:
     rc, r = p.get("review_count") or 0, float(p.get("rating") or 0)
     bayes = (rc * r + RATING_PRIOR_COUNT * ctx["mean_rating"]) / (rc + RATING_PRIOR_COUNT)
 
-    style_point = {"low": {"standard": 1.0, "unique": 0.0},
-                   "mid": {"standard": 0.5, "unique": 0.5},
-                   "high": {"standard": 0.0, "unique": 1.0}}[cond["preference_knowledge"]]
 
     return {
         "preference": (pref + scent) / 2,
@@ -111,15 +108,16 @@ def factor_values(p: dict, cond: dict, ctx: dict) -> dict:
         "workplace": float(p.get("workplace_friendly") or 0),
         "sales": sales,
         "rating": bayes / 5,
-        "style": style_point.get(p.get("style"), 0.5),
+        "standard": 1.0 if p.get("style") == "standard" else 0.0,   # 定番らしさ
+        "unique": 1.0 if p.get("style") == "unique" else 0.0,       # 個性
     }
 
 
 def score_candidates(candidates: list[dict], cond: dict) -> list[dict]:
-    """6要素×重みの合計（0〜1）で並べ、候補ごとに理由2つ・注意点1つを付けて返す。"""
+    """7要素×重みの合計（0〜1）で並べ、候補ごとに理由2つ・注意点1つを付けて返す。"""
     if not candidates:
         return []
-    weights = weights_for(cond["preference_knowledge"], cond["handover"])
+    weights = weights_for(cond["preference_knowledge"], cond["handover"], bool(cond.get("theme_ids")))
     rated = [float(p.get("rating") or 0) for p in candidates if p.get("review_count")]
     ctx = {
         "max_sales": max(p.get("sobetsu_orders") or 0 for p in candidates),

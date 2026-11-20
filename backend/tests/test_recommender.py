@@ -6,7 +6,7 @@
 import unittest
 
 from services.recommender import filter_candidates, price_band, recommend, score_candidates
-from services.weights import WEIGHTS, weights_for
+from services.weights import NO_EPISODE, WITH_EPISODE, weights_for
 
 
 def item(pid, name, price, **attrs):
@@ -42,13 +42,23 @@ def fake_fetch(products):
 
 
 class TestWeights(unittest.TestCase):
-    def test_どの把握度でも重みの合計は1(self):
-        for k, w in WEIGHTS.items():
+    def test_どの条件でも重みの合計は1(self):
+        for k, w in WITH_EPISODE.items():
             self.assertAlmostEqual(sum(w.values()), 1.0, msg=k)
+        self.assertAlmostEqual(sum(NO_EPISODE.values()), 1.0)
+        for k in WITH_EPISODE:
+            for h in ("hand", "ship"):
+                for e in (True, False):
+                    self.assertAlmostEqual(sum(weights_for(k, h, e).values()), 1.0, msg=f"{k}/{h}/{e}")
 
-    def test_配送なら職場での渡しやすさは0(self):
-        self.assertEqual(weights_for("low", "ship")["workplace"], 0.0)
-        self.assertEqual(weights_for("low", "hand")["workplace"], 0.15)
+    def test_エピソードなしは把握度に関係なく共通の重み(self):
+        self.assertEqual(weights_for("low", "hand"), weights_for("high", "hand"))
+        self.assertEqual(weights_for("low", "hand")["unique"], 0.0)
+
+    def test_配送なら渡しやすさの重みを好みに左右されにくさに足す(self):
+        hand, ship = weights_for("low", "hand"), weights_for("low", "ship")
+        self.assertEqual(ship["workplace"], 0.0)
+        self.assertAlmostEqual(ship["preference"], hand["preference"] + hand["workplace"])
 
 
 class TestNo1(unittest.TestCase):
@@ -117,13 +127,20 @@ class TestNo5(unittest.TestCase):
 
 
 class TestKnowledge(unittest.TestCase):
-    def test_好みをよく知っていれば個性的な商品が上に来る(self):
+    def test_エピソードがあり好みをよく知っていれば個性的な商品が上に来る(self):
         a = item("S01", "定番の品", 4000, style="standard")
         b = item("S02", "個性的な品", 4000, style="unique")
-        low = score_candidates([a, b], dict(NO1, preference_knowledge="low"))
-        high = score_candidates([a, b], dict(NO1, preference_knowledge="high"))
+        low = score_candidates([a, b], dict(NO1, preference_knowledge="low", theme_ids=["T001"]))
+        high = score_candidates([a, b], dict(NO1, preference_knowledge="high", theme_ids=["T001"]))
         self.assertEqual(low[0]["product_id"], "S01")
         self.assertEqual(high[0]["product_id"], "S02")
+
+    def test_エピソードがなければ好みをよく知っていても定番が上(self):
+        # 好みの中身が入力されていないので、個性的な商品を上に出す根拠が無い（要件定義書 6.2）
+        a = item("S01", "定番の品", 4000, style="standard")
+        b = item("S02", "個性的な品", 4000, style="unique")
+        high = score_candidates([a, b], dict(NO1, preference_knowledge="high"))
+        self.assertEqual(high[0]["product_id"], "S01")
 
     def test_好みを少しでも知っていれば依存度が高い商品も候補に残る(self):
         kept, _ = filter_candidates(P, dict(NO1, preference_knowledge="mid"))
