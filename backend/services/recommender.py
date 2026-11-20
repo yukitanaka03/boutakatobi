@@ -20,6 +20,9 @@ MIN_SHELF_LIFE_DAYS = 14
 RATING_PRIOR_COUNT = 20
 DEFAULT_LIMIT = 3
 MAX_LIMIT = 5
+# 上位に同じカテゴリーが並ぶと比べようがない（実データでは No.1 の上位5件がすべてタオルになった）。
+# 1カテゴリーはこの件数までにし、足りないときだけ残りで埋める（要求 A-1「数点に絞って比較できる」）
+MAX_PER_CATEGORY = 2
 
 # 属性の値 → 0〜1 の点（1が「外れにくい」）
 PREFERENCE_POINTS = {"low": 1.0, "mid": 0.5, "high": 0.0}   # 好みへの依存度
@@ -84,7 +87,7 @@ def filter_candidates(candidates: list[dict], cond: dict) -> tuple[list[dict], l
 
 # ── 3. 順位付け ─────────────────────────────────────────
 def factor_values(p: dict, cond: dict, ctx: dict) -> dict:
-    """1商品の6要素を、それぞれ 0〜1 の点にする。1 が「その要素で見て外れにくい」。"""
+    """1商品の7要素を、それぞれ 0〜1 の点にする（要件定義書 6.2）。"""
     pref = PREFERENCE_POINTS.get(p.get("preference_dependency"), 0.5)
     scent = SCENT_POINTS.get(p.get("scent_level"), 0.5)
 
@@ -98,9 +101,6 @@ def factor_values(p: dict, cond: dict, ctx: dict) -> dict:
     rc, r = p.get("review_count") or 0, float(p.get("rating") or 0)
     bayes = (rc * r + RATING_PRIOR_COUNT * ctx["mean_rating"]) / (rc + RATING_PRIOR_COUNT)
 
-    style_point = {"low": {"standard": 1.0, "unique": 0.0},
-                   "mid": {"standard": 0.5, "unique": 0.5},
-                   "high": {"standard": 0.0, "unique": 1.0}}[cond["preference_knowledge"]]
 
     return {
         "preference": (pref + scent) / 2,
@@ -108,15 +108,16 @@ def factor_values(p: dict, cond: dict, ctx: dict) -> dict:
         "workplace": float(p.get("workplace_friendly") or 0),
         "sales": sales,
         "rating": bayes / 5,
-        "style": style_point.get(p.get("style"), 0.5),
+        "standard": 1.0 if p.get("style") == "standard" else 0.0,   # 定番らしさ
+        "unique": 1.0 if p.get("style") == "unique" else 0.0,       # 個性
     }
 
 
 def score_candidates(candidates: list[dict], cond: dict) -> list[dict]:
-    """6要素×重みの合計（0〜1）で並べ、候補ごとに理由2つ・注意点1つを付けて返す。"""
+    """7要素×重みの合計（0〜1）で並べ、候補ごとに理由2つ・注意点1つを付けて返す。"""
     if not candidates:
         return []
-    weights = weights_for(cond["preference_knowledge"], cond["handover"])
+    weights = weights_for(cond["preference_knowledge"], cond["handover"], bool(cond.get("theme_ids")))
     rated = [float(p.get("rating") or 0) for p in candidates if p.get("review_count")]
     ctx = {
         "max_sales": max(p.get("sobetsu_orders") or 0 for p in candidates),
@@ -126,7 +127,7 @@ def score_candidates(candidates: list[dict], cond: dict) -> list[dict]:
     for p in candidates:
         values = factor_values(p, cond, ctx)
         contrib = {k: weights[k] * v for k, v in values.items()}
-        reasons, caution = build_reasons(p, values, contrib)
+        reasons, caution = build_reasons(p, values, contrib, cond["handover"])
         scored.append({**p, "score": round(sum(contrib.values()), 4), "contributions": contrib,
                        "reasons": reasons, "caution": caution})
     # 同点なら、送別での購入数が多い方 → 商品IDの順（毎回同じ順位にするため）
@@ -134,16 +135,29 @@ def score_candidates(candidates: list[dict], cond: dict) -> list[dict]:
     return scored
 
 
+def diversify(ranked: list[dict], limit: int) -> list[dict]:
+    """スコア順を保ったまま、1カテゴリー MAX_PER_CATEGORY 件までで limit 件選ぶ。足りなければ残りから順に足す。"""
+    picked, per_cat = [], {}
+    for p in ranked:
+        if per_cat.get(p.get("category"), 0) < MAX_PER_CATEGORY:
+            picked.append(p)
+            per_cat[p.get("category")] = per_cat.get(p.get("category"), 0) + 1
+        if len(picked) == limit:
+            return picked
+    rest = [p for p in ranked if p not in picked]
+    return picked + rest[: limit - len(picked)]
+
+
 def recommend(cond: dict, fetch=fetch_candidates) -> dict:
     """FR-3・FR-4・FR-6 をまとめて実行する。fetch を差し替えると、DBなしで動かせる（テスト用）。"""
     limit = min(max(int(cond.get("limit") or DEFAULT_LIMIT), 1), MAX_LIMIT)
     candidates = fetch(cond["total_budget"])
     kept, applied = filter_candidates(candidates, cond)
-    ranked = score_candidates(kept, cond)
+    ranked = diversify(score_candidates(kept, cond), limit)
     return {
         "per_person_budget": cond["total_budget"] // max(cond["num_givers"], 1),
         "applied_exclusions": applied,
         "candidate_count": len(kept),
         "episode_used": bool(cond.get("theme_ids")),
-        "results": ranked[:limit],
+        "results": ranked,
     }
