@@ -3,6 +3,7 @@
 // 1週目の lib/sampleGifts.ts は、このファイルに置き換える（ダミーは使わない）。
 // 答えは 配布コード/答え合わせ/frontend/api.ts（自分で埋めてから見る）。
 
+import type { FarewellInput, RecommendationResponse } from "./types";
 // 画面が使う商品の形。1週目と同じ（画面・ResultCard は変えない）
 export type Gift = {
   id: string; // 商品ID（例 G0001）
@@ -51,4 +52,18 @@ export async function searchGifts(c: SearchCondition): Promise<Gift[]> {
   // ③ 返ってきた JSON を読む。{ total, results } の results が Gift の配列
   const data = await res.json();
   return data.results;
+}
+
+// 送別の候補を API に聞く（FR-3・4・6）。件数は要件の上限 5 件、テーマは来週まで空
+export async function fetchRecommendations(
+  input: FarewellInput,
+): Promise<RecommendationResponse> {
+  const res = await fetch(`${API}/api/farewell/recommendations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...input, theme_ids: [], limit: 5 }),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
