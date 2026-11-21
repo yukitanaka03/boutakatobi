@@ -12,6 +12,8 @@ SEED_DIR = Path(__file__).resolve().parent.parent / "sql" / "seed"
 TEMPLATE_CSV = SEED_DIR / "reason_templates.csv"
 THEME_CSV = SEED_DIR / "theme_tags.csv"
 THRESHOLD = 0.5   # この点以上の要素だけを理由にする
+# テーマの理由文は {関係性} の位置に相手との関係性を入れる（要件定義書 5.2 reason_templates。例「コーヒー好きの先輩に」）
+RELATIONSHIP_LABELS = {"senior": "先輩", "peer": "同僚", "boss": "上司", "junior": "後輩", "client": "取引先の方"}
 
 
 @lru_cache(maxsize=1)
@@ -32,13 +34,14 @@ def _text(target_type: str, key: str, value) -> str | None:
     return load_templates().get((target_type, key, str(value)))
 
 
-def reason_for(factor: str, p: dict, matched_themes: list[str] | None = None) -> str | None:
+def reason_for(factor: str, p: dict, matched_themes: list[str] | None = None,
+               relationship: str | None = None) -> str | None:
     """要素ごとに、商品の属性値（エピソードは一致したテーマ）から定型文を選ぶ。"""
     if factor == "episode":
         # 入力したテーマの順（＝エピソードで先に出た手がかり）で、最初に一致したテーマの文言を使う
         for theme_id in matched_themes or []:
             if t := _text("theme", theme_id, "any"):
-                return t
+                return t.replace("{関係性}", RELATIONSHIP_LABELS.get(relationship, "方"))
         return None
     if factor == "preference":
         # 香りなし を優先し、無ければ好みへの依存度で言う
@@ -90,13 +93,14 @@ def caution_for(p: dict, handover: str = "hand") -> str | None:
 
 
 def build_reasons(p: dict, values: dict, contrib: dict, handover: str = "hand",
-                  matched_themes: list[str] | None = None) -> tuple[list[str], str | None]:
+                  matched_themes: list[str] | None = None,
+                  relationship: str | None = None) -> tuple[list[str], str | None]:
     """理由（最大2つ）と注意点（最大1つ）を返す。"""
     order = sorted((k for k in contrib if contrib[k] > 0 and values[k] >= THRESHOLD),
                    key=lambda k: -contrib[k])
     reasons = []
     for factor in order:
-        text = reason_for(factor, p, matched_themes)
+        text = reason_for(factor, p, matched_themes, relationship)
         if text and text not in reasons:
             reasons.append(text)
         if len(reasons) == 2:

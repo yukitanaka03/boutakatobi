@@ -80,15 +80,20 @@ class TestFR5Episode(unittest.TestCase):
     def test_テーマが合った商品にはテーマの理由と合ったテーマ名が付く(self):
         out = recommend(dict(NO1, limit=5, theme_ids=[COFFEE]), fetch=fake_fetch(P))
         by = {r["product_id"]: r for r in out["results"]}
-        self.assertIn("コーヒー好きの方に", by["F02"]["reasons"])
+        self.assertIn("コーヒー好きの先輩に", by["F02"]["reasons"])         # {関係性} に「先輩」が入る
         self.assertEqual(by["F02"]["matched_themes"], ["コーヒー"])
         self.assertEqual(by["F01"]["matched_themes"], [])                    # テーマなしの商品には付けない
-        self.assertNotIn("コーヒー好きの方に", by["F01"]["reasons"])
+        self.assertNotIn("コーヒー好きの先輩に", by["F01"]["reasons"])
+
+    def test_テーマの理由には相手との関係性が入る(self):
+        for rel, label in [("boss", "上司"), ("junior", "後輩"), ("client", "取引先の方")]:
+            out = recommend(dict(NO1, relationship=rel, limit=5, theme_ids=[COFFEE]), fetch=fake_fetch(P))
+            self.assertIn(f"コーヒー好きの{label}に", out["results"][0]["reasons"])
 
     def test_テーマの理由はエピソードで先に出たテーマを使う(self):
         out = recommend(dict(NO1, preference_knowledge="mid", limit=5, theme_ids=[SWEETS, COFFEE]), fetch=fake_fetch(P))
         f03 = next(r for r in out["results"] if r["product_id"] == "F03")
-        self.assertIn("甘いもの好きの方に", f03["reasons"])
+        self.assertIn("甘いもの好きの先輩に", f03["reasons"])
         self.assertEqual(f03["matched_themes"], ["甘いもの", "コーヒー"])
 
 
@@ -129,9 +134,12 @@ class TestThemeSeeds(unittest.TestCase):
         for theme_id in names:
             self.assertRegex(theme_id, r"^T\d{3}$")
 
-    def test_どのテーマにも理由文がある(self):
-        keys = {k for (t, k, _) in load_templates() if t == "theme"}
-        self.assertEqual(keys, set(theme_names()))
+    def test_どのテーマにも理由文があり関係性を入れても30字以内(self):
+        theme_texts = {k: text for (t, k, _), text in load_templates().items() if t == "theme"}
+        self.assertEqual(set(theme_texts), set(theme_names()))
+        for k, text in theme_texts.items():
+            self.assertIn("{関係性}", text, msg=k)
+            self.assertLessEqual(len(text.replace("{関係性}", "取引先の方")), 30, msg=k)   # 5.2 reason_templates.text
 
     def test_商品とテーマの対応は語彙と属性付与済みの商品だけを使い重複しない(self):
         pairs = [(r["product_id"], r["theme_id"]) for r in self.links]

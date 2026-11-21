@@ -153,7 +153,7 @@ def score_candidates(candidates: list[dict], cond: dict) -> list[dict]:
         values = factor_values(p, cond, ctx)
         contrib = {k: weights[k] * v for k, v in values.items()}
         matched = [t for t in (cond.get("theme_ids") or []) if t in set(p.get("theme_ids") or [])]
-        reasons, caution = build_reasons(p, values, contrib, cond["handover"], matched)
+        reasons, caution = build_reasons(p, values, contrib, cond["handover"], matched, cond.get("relationship"))
         scored.append({**p, "score": round(sum(contrib.values()), 4), "contributions": contrib,
                        "reasons": reasons, "caution": caution,
                        "matched_themes": [theme_names().get(t, t) for t in matched]})
