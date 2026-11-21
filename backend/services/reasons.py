@@ -8,7 +8,9 @@ import csv
 from functools import lru_cache
 from pathlib import Path
 
-TEMPLATE_CSV = Path(__file__).resolve().parent.parent / "sql" / "seed" / "reason_templates.csv"
+SEED_DIR = Path(__file__).resolve().parent.parent / "sql" / "seed"
+TEMPLATE_CSV = SEED_DIR / "reason_templates.csv"
+THEME_CSV = SEED_DIR / "theme_tags.csv"
 THRESHOLD = 0.5   # この点以上の要素だけを理由にする
 
 
@@ -19,12 +21,25 @@ def load_templates() -> dict:
         return {(r["target_type"], r["target_key"], r["target_value"]): r["text"] for r in csv.DictReader(f)}
 
 
+@lru_cache(maxsize=1)
+def theme_names() -> dict:
+    """theme_id → テーマ名（theme_tags の語彙）。画面で「どのテーマに合ったか」を出すのに使う。"""
+    with open(THEME_CSV, encoding="utf-8") as f:
+        return {r["theme_id"]: r["name"] for r in csv.DictReader(f)}
+
+
 def _text(target_type: str, key: str, value) -> str | None:
     return load_templates().get((target_type, key, str(value)))
 
 
-def reason_for(factor: str, p: dict) -> str | None:
-    """要素ごとに、商品の属性値から定型文を選ぶ。"""
+def reason_for(factor: str, p: dict, matched_themes: list[str] | None = None) -> str | None:
+    """要素ごとに、商品の属性値（エピソードは一致したテーマ）から定型文を選ぶ。"""
+    if factor == "episode":
+        # 入力したテーマの順（＝エピソードで先に出た手がかり）で、最初に一致したテーマの文言を使う
+        for theme_id in matched_themes or []:
+            if t := _text("theme", theme_id, "any"):
+                return t
+        return None
     if factor == "preference":
         # 香りなし を優先し、無ければ好みへの依存度で言う
         # 「好みに左右されにくい」と言うのは、依存度が low と分かっている商品だけ（属性と矛盾させないため）
@@ -56,7 +71,7 @@ def reason_for(factor: str, p: dict) -> str | None:
         return _text("attribute", "style", "standard")
     if factor == "unique":
         return _text("attribute", "style", "unique")
-    return None   # episode は来週（テーマの文言は target_type=theme で足す）
+    return None
 
 
 def caution_for(p: dict, handover: str = "hand") -> str | None:
@@ -74,13 +89,14 @@ def caution_for(p: dict, handover: str = "hand") -> str | None:
     return None
 
 
-def build_reasons(p: dict, values: dict, contrib: dict, handover: str = "hand") -> tuple[list[str], str | None]:
+def build_reasons(p: dict, values: dict, contrib: dict, handover: str = "hand",
+                  matched_themes: list[str] | None = None) -> tuple[list[str], str | None]:
     """理由（最大2つ）と注意点（最大1つ）を返す。"""
     order = sorted((k for k in contrib if contrib[k] > 0 and values[k] >= THRESHOLD),
                    key=lambda k: -contrib[k])
     reasons = []
     for factor in order:
-        text = reason_for(factor, p)
+        text = reason_for(factor, p, matched_themes)
         if text and text not in reasons:
             reasons.append(text)
         if len(reasons) == 2:

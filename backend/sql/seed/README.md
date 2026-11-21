@@ -2,8 +2,21 @@
 
 | ファイル | 入れ先のテーブル | 中身 |
 |---|---|---|
-| `product_attributes.csv` | product_attributes | 商品ごとの「外れにくさの属性」。今週は人が手で付ける（FR-8 の生成AI推定は来週以降） |
-| `reason_templates.csv` | reason_templates | 理由文・注意点の定型文（FR-6） |
+| `product_attributes.csv` | product_attributes | 商品ごとの「外れにくさの属性」（FR-8）。`scripts/tag_products.py` で作る |
+| `theme_tags.csv` | theme_tags | テーマの語彙20語（DR-2）。エピソードから取り出すテーマ（FR-2）も同じ語彙を使う |
+| `product_themes.csv` | product_themes | 商品とテーマの対応（DR-3、FR-5 で使う）。`scripts/tag_themes.py` で作る |
+| `reason_templates.csv` | reason_templates | 理由文・注意点の定型文（FR-6）。テーマの理由（target_type=theme）は R101〜R120 |
+
+## 付ける商品（328件）
+
+送別タグ付き・在庫ありの商品のうち、送別での購入数（直近1年）の上位300件＋前回までに付けた商品（価格帯の確認用）＋
+テーマごとに商品が3件に満たないものを、そのテーマの購入数上位から足したもの。
+属性とテーマは同じ商品に付ける（テーマだけ付いて属性の無い商品は、候補に出ないため）。
+
+```bash
+python scripts/tag_products.py <書き出したCSV>   # → product_attributes.csv
+python scripts/tag_themes.py <書き出したCSV>     # → product_themes.csv
+```
 
 **`product_attributes.csv` が見出し行だけだと、候補は必ず0件になる**（FR-3 は属性が付いた商品だけを取るため）。
 

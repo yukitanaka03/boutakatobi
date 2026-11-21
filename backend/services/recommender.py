@@ -1,15 +1,15 @@
-# services/recommender.py — 送別の候補を取り、外れにくさで並べる（FR-3・FR-4）
+# services/recommender.py — 送別の候補を取り、外れにくさで並べる（FR-3・FR-4・FR-5）
 #
 # 処理は3段に分けてある。
-#   1. fetch_candidates   … 班のDBから候補を取る（SQL）。送別タグ・在庫あり・価格帯・属性あり
+#   1. fetch_candidates   … 班のDBから候補を取る（SQL）。送別タグ・在庫あり・価格帯・属性あり。商品のテーマも一緒に取る
 #   2. filter_candidates  … 状況に応じて「外れやすい商品」を除く（Python）
-#   3. score_candidates   … 6つの要素×重みの合計で並べ、理由を付ける（Python）
+#   3. score_candidates   … 7つの要素×重みの合計で並べ、理由を付ける（Python）。エピソードのテーマ（FR-5）もここで効く
 # 2と3は商品のリストを受け取るだけの関数で、DBにつながなくてもテストできる（tests/test_recommender.py）。
 # 順位付けに生成AIは使わない。同じ入力なら必ず同じ順位になる（要件定義書 6.1）。
 
 import math
 
-from services.reasons import build_reasons
+from services.reasons import build_reasons, theme_names
 from services.weights import weights_for
 
 # 予算の基準は「総予算」。連名で1つの品を買う送別なので、総予算の70%〜100%を価格帯にする（要件定義書 6.2・6.4 No.1）
@@ -39,9 +39,14 @@ CANDIDATE_SQL = """
 SELECT p.product_id, p.product_name, p.category, p.brand, p.price, p.rating, p.review_count, p.stock,
        a.preference_dependency, a.scent_level, a.room_temp_ok, a.individually_wrapped,
        a.shelf_life_days, a.carry_size, a.shareable, a.workplace_friendly, a.style,
-       COALESCE(s.sobetsu_orders, 0) AS sobetsu_orders
+       COALESCE(s.sobetsu_orders, 0) AS sobetsu_orders,
+       t.themes
 FROM products p
 JOIN product_attributes a ON a.product_id = p.product_id
+LEFT JOIN (
+    SELECT product_id, GROUP_CONCAT(CONCAT(theme_id, ':', COALESCE(confidence, 1)) ORDER BY theme_id) AS themes
+    FROM product_themes GROUP BY product_id
+) t ON t.product_id = p.product_id
 LEFT JOIN (
     SELECT oi.product_id, COUNT(DISTINCT o.order_id) AS sobetsu_orders
     FROM orders o JOIN order_items oi ON oi.order_id = o.order_id
@@ -55,11 +60,28 @@ WHERE EXISTS (SELECT 1 FROM product_scenes ps WHERE ps.product_id = p.product_id
 """
 
 
+def parse_themes(text: str | None) -> tuple[list[str], dict]:
+    """SQL でまとめた「T001:0.90,T009:1」を、テーマIDのリストと {テーマID: 確からしさ} に戻す。
+    人が付けたテーマ（manual）は confidence が NULL なので、SQL で 1（確か）にしてある。"""
+    ids, conf = [], {}
+    for part in (text or "").split(","):
+        if part:
+            theme_id, value = part.split(":")
+            ids.append(theme_id)
+            conf[theme_id] = float(value)
+    return ids, conf
+
+
 def fetch_candidates(total_budget: int) -> list[dict]:
-    """送別タグ付き・在庫あり・価格帯内・属性付与済みの商品を取る。送別での購入数（直近1年）も一緒に集計する。"""
+    """送別タグ付き・在庫あり・価格帯内・属性付与済みの商品を取る。送別での購入数（直近1年）と、
+    商品のテーマ（FR-5 で使う theme_ids・theme_confidence）も同じSQLで取る。
+    テーマを別のSQLにしないのは、班のDBは接続1回に約1.2秒かかり、2回つなぐと3秒（NFR-3）を超えるため。"""
     from database import fetch_all  # テストでは呼ばないので、ここで読み込む（DB接続設定が無くてもテストできる）
     low, high = price_band(total_budget)
-    return fetch_all(CANDIDATE_SQL, (low, high))
+    rows = fetch_all(CANDIDATE_SQL, (low, high))
+    for r in rows:
+        r["theme_ids"], r["theme_confidence"] = parse_themes(r.pop("themes", None))
+    return rows
 
 
 # ── 2. 除外条件 ─────────────────────────────────────────
@@ -91,9 +113,12 @@ def factor_values(p: dict, cond: dict, ctx: dict) -> dict:
     pref = PREFERENCE_POINTS.get(p.get("preference_dependency"), 0.5)
     scent = SCENT_POINTS.get(p.get("scent_level"), 0.5)
 
-    themes = set(cond.get("theme_ids") or [])
-    matched = themes & set(p.get("theme_ids") or [])
-    episode = len(matched) / len(themes) if themes else 0.0      # FR-5（来週）。今週はテーマが無いので 0
+    # FR-5：エピソードのテーマのどれかが商品に付いていれば、そのテーマの確からしさ（product_themes.confidence）を点にする。
+    # 「入力したテーマのうち何割が合うか」にしないのは、1つのエピソードから「コーヒー・デスクワーク・マグ」のように
+    # 複数のテーマが出ると、コーヒーの商品でも1/3点になり、テーマの無いタオルに負けるため（例文で確認）
+    conf = p.get("theme_confidence") or {}
+    matched = [t for t in (cond.get("theme_ids") or []) if t in set(p.get("theme_ids") or [])]
+    episode = max((conf.get(t, 1.0) for t in matched), default=0.0)
 
     n = p.get("sobetsu_orders") or 0
     sales = math.log1p(n) / math.log1p(ctx["max_sales"]) if ctx["max_sales"] > 0 else 0.0
@@ -127,9 +152,11 @@ def score_candidates(candidates: list[dict], cond: dict) -> list[dict]:
     for p in candidates:
         values = factor_values(p, cond, ctx)
         contrib = {k: weights[k] * v for k, v in values.items()}
-        reasons, caution = build_reasons(p, values, contrib, cond["handover"])
+        matched = [t for t in (cond.get("theme_ids") or []) if t in set(p.get("theme_ids") or [])]
+        reasons, caution = build_reasons(p, values, contrib, cond["handover"], matched)
         scored.append({**p, "score": round(sum(contrib.values()), 4), "contributions": contrib,
-                       "reasons": reasons, "caution": caution})
+                       "reasons": reasons, "caution": caution,
+                       "matched_themes": [theme_names().get(t, t) for t in matched]})
     # 同点なら、送別での購入数が多い方 → 商品IDの順（毎回同じ順位にするため）
     scored.sort(key=lambda x: (-x["score"], -(x.get("sobetsu_orders") or 0), x["product_id"]))
     return scored
@@ -149,15 +176,21 @@ def diversify(ranked: list[dict], limit: int) -> list[dict]:
 
 
 def recommend(cond: dict, fetch=fetch_candidates) -> dict:
-    """FR-3・FR-4・FR-6 をまとめて実行する。fetch を差し替えると、DBなしで動かせる（テスト用）。"""
+    """FR-3・FR-4・FR-5・FR-6 をまとめて実行する。fetch を差し替えると、DBなしで動かせる（テスト用）。"""
     limit = min(max(int(cond.get("limit") or DEFAULT_LIMIT), 1), MAX_LIMIT)
     candidates = fetch(cond["total_budget"])
     kept, applied = filter_candidates(candidates, cond)
+    # テーマに合う商品が1件も残らなければ、エピソードを使わずに並べる（FR-5「テーマが無いときは外れにくさだけ」）。
+    # エピソードありの重みのまま並べると、関連度が全員0点のまま好みの重みだけが下がり、No.1より外れやすい並びになる
+    themes = set(cond.get("theme_ids") or [])
+    episode_used = any(themes & set(p.get("theme_ids") or []) for p in kept)
+    if themes and not episode_used:
+        cond = {**cond, "theme_ids": []}
     ranked = diversify(score_candidates(kept, cond), limit)
     return {
         "per_person_budget": cond["total_budget"] // max(cond["num_givers"], 1),
         "applied_exclusions": applied,
         "candidate_count": len(kept),
-        "episode_used": bool(cond.get("theme_ids")),
+        "episode_used": episode_used,
         "results": ranked,
     }
