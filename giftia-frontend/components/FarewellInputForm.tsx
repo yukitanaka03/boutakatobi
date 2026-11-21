@@ -11,6 +11,7 @@ import {
   GIVER_OPTIONS,
   calcBudgetPerPerson,
 } from "@/lib/types";
+import { logEvent } from "@/lib/events";
 import styles from "./FarewellInputForm.module.css";
 
 type FormState = Partial<FarewellInput>;
@@ -46,6 +47,7 @@ export default function FarewellInputForm() {
       num_givers: String(form.num_givers),
       handover: form.handover!,
     });
+    logEvent("input_submit");
     router.push(`/farewell/results?${params.toString()}`);
   };
 

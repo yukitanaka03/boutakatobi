@@ -2,8 +2,9 @@
 # 画面（lib/types.ts）と項目名をそろえる。片方だけ変えないこと。
 
 from typing import Literal
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class RecommendationRequest(BaseModel):
@@ -34,3 +35,33 @@ class RecommendationResponse(BaseModel):
     candidate_count: int
     episode_used: bool
     results: list[Candidate]
+
+
+# ── /api/events（利用ログ FR-9・DR-7）の入力と出力 ──────────────
+# 操作の種類は6つだけ。画面（lib/events.ts の EventType）と並び・綴りをそろえる。
+EventType = Literal["input_submit", "episode_submit", "results_view", "share_create", "share_view", "product_click"]
+
+
+class EventRequest(BaseModel):
+    # 決めた項目以外を受け付けない（エピソード原文や氏名が混ざって保存されるのを防ぐ NFR-1・NFR-7）
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: UUID = Field(description="利用の単位（画面が初回アクセス時に発行する UUID）")
+    event_type: EventType = Field(description="操作の種類")
+    share_id: UUID | None = Field(default=None, description="関連する共有ページの UUID（共有の発行・閲覧のとき）")
+    product_id: str | None = Field(
+        default=None, pattern=r"^G\d{4,8}$", max_length=10, description="関連する商品ID（例 G0001。商品ページへ移動のとき）"
+    )
+
+    @model_validator(mode="after")
+    def check_required_ids(self):
+        """共有の操作には共有ID、商品ページへの移動には商品IDが要る（足りなければ 422 になる）"""
+        if self.event_type in ("share_create", "share_view") and self.share_id is None:
+            raise ValueError(f"{self.event_type} には share_id が必要です")
+        if self.event_type == "product_click" and self.product_id is None:
+            raise ValueError("product_click には product_id が必要です")
+        return self
+
+
+class EventResponse(BaseModel):
+    ok: bool  # 記録できたか
