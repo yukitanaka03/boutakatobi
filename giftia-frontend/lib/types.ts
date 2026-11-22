@@ -62,6 +62,69 @@ export function calcBudgetPerPerson(
 }
 
 // ============================================================
+// FR-3・4・6 /api/farewell/recommendations の返り値
+// backend/schemas.py の Candidate・RecommendationResponse と項目名をそろえる
+// ============================================================
+
+export interface RecommendationCandidate {
+  rank: number;
+  product_id: string;
+  product_name: string;
+  category: string;
+  brand: string | null;
+  price: number;
+  score: number;
+  reasons: string[];
+  caution: string | null;
+}
+
+export interface RecommendationResponse {
+  per_person_budget: number;
+  applied_exclusions: string[];
+  candidate_count: number;
+  episode_used: boolean;
+  results: RecommendationCandidate[];
+}
+
+// 値（senior など）から日本語ラベル（職場の先輩 など）を引く
+export function labelOf(
+  options: { value: string; label: string }[],
+  value: string,
+): string {
+  return options.find((o) => o.value === value)?.label ?? value;
+}
+
+// URL のクエリを入力条件に戻す。欠けている・不正な値があれば null
+export function parseFarewellInput(
+  params: Record<string, string | string[] | undefined>,
+): FarewellInput | null {
+  const get = (key: string) => {
+    const v = params[key];
+    return typeof v === "string" ? v : "";
+  };
+
+  const relationship = get("relationship");
+  const preference = get("preference_knowledge");
+  const handover = get("handover");
+  const totalBudget = Number(get("total_budget"));
+  const numGivers = Number(get("num_givers"));
+
+  if (!RELATIONSHIP_OPTIONS.some((o) => o.value === relationship)) return null;
+  if (!PREFERENCE_OPTIONS.some((o) => o.value === preference)) return null;
+  if (!HANDOVER_OPTIONS.some((o) => o.value === handover)) return null;
+  if (!Number.isInteger(totalBudget) || totalBudget <= 0) return null;
+  if (!Number.isInteger(numGivers) || numGivers < 1) return null;
+
+  return {
+    relationship: relationship as Relationship,
+    preference_knowledge: preference as PreferenceKnowledge,
+    total_budget: totalBudget,
+    num_givers: numGivers,
+    handover: handover as Handover,
+  };
+}
+
+// ============================================================
 // FR-7 共有ページ（backend の schemas.py の ShareCreateResponse・ShareItem・ShareResponse と項目名をそろえる）
 // 片方だけ変えないこと。日時は JSON では文字列（ISO 形式）で届く
 // ============================================================

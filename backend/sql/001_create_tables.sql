@@ -28,3 +28,20 @@ CREATE TABLE IF NOT EXISTS reason_templates (
 );
 -- reason_templates の中身は sql/seed/reason_templates.csv（Workbench の Table Data Import Wizard で読み込む）
 -- 今は API が CSV を直接読んでいる（services/reasons.py）。DB に入れたら DB から読むように変える
+
+-- FR-5（エピソードとの関連度）で使うテーブル（要件定義書 5.2 の DR-2・DR-3）
+CREATE TABLE IF NOT EXISTS theme_tags (
+    theme_id  VARCHAR(4)  NOT NULL PRIMARY KEY COMMENT 'T+3桁',
+    name      VARCHAR(20) NOT NULL COMMENT 'エピソードと商品を結び付けるテーマ（趣味・習慣・生活シーン）'
+);
+
+CREATE TABLE IF NOT EXISTS product_themes (
+    product_id  VARCHAR(10)  NOT NULL,
+    theme_id    VARCHAR(4)   NOT NULL,
+    source      VARCHAR(6)   NOT NULL COMMENT 'ai/manual：付け方',
+    confidence  DECIMAL(3,2) NULL     COMMENT 'AI推定の確からしさ。manual は NULL',
+    PRIMARY KEY (product_id, theme_id),
+    CONSTRAINT fk_theme_product FOREIGN KEY (product_id) REFERENCES products(product_id),
+    CONSTRAINT fk_theme_tag     FOREIGN KEY (theme_id)   REFERENCES theme_tags(theme_id)
+);
+-- 中身は sql/seed/theme_tags.csv（語彙20語）と sql/seed/product_themes.csv（scripts/tag_themes.py で作る）

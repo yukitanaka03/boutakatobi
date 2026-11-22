@@ -1,6 +1,6 @@
 # routers/farewell.py — 送別の候補を返す窓口（FR-3・FR-4・FR-6）
 # 計算は services/recommender.py に任せ、ここは「受け取る・返す」だけにする。
-# /api/farewell/themes（FR-2 エピソードからのテーマ抽出）は来週足す。
+# /api/farewell/themes（FR-2 エピソードからのテーマ抽出）は別のファイルで足す。
 
 from fastapi import APIRouter
 

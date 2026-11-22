@@ -14,7 +14,7 @@ class RecommendationRequest(BaseModel):
     total_budget: int = Field(gt=0, description="贈り手全員の合計予算（円）")
     num_givers: int = Field(default=1, ge=1, description="連名で贈る人数")
     handover: Literal["hand", "ship"] = Field(default="hand", description="渡し方（hand=職場で手渡し）")
-    theme_ids: list[str] = Field(default_factory=list, description="エピソードから抽出したテーマ（来週。今は空）")
+    theme_ids: list[str] = Field(default_factory=list, description="エピソードから抽出したテーマ（/api/farewell/themes の theme_id。無ければ空）")
     limit: int = Field(default=3, ge=1, le=5, description="返す件数（3〜5）")
 
 
@@ -28,13 +28,14 @@ class Candidate(BaseModel):
     score: float
     reasons: list[str]
     caution: str | None = None
+    matched_themes: list[str] = Field(default_factory=list, description="エピソードのテーマのうち、この商品に合ったもの（テーマ名）")
 
 
 class RecommendationResponse(BaseModel):
     per_person_budget: int
     applied_exclusions: list[str]
     candidate_count: int
-    episode_used: bool
+    episode_used: bool = Field(description="エピソードを順位に反映したか。テーマに合う商品が無ければ false（画面で通知する）")
     results: list[Candidate]
 
 
