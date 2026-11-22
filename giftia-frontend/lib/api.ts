@@ -9,6 +9,7 @@ import type {
   ShareCreateResponse,
   ShareInput,
   ShareResponse,
+  ThemeResponse,
 } from "./types";
 
 // 画面が使う商品の形。1週目と同じ（画面・ResultCard は変えない）
@@ -61,15 +62,28 @@ export async function searchGifts(c: SearchCondition): Promise<Gift[]> {
   return data.results;
 }
 
-// 送別の候補を API に聞く（FR-3・4・6）。件数は要件の上限 5 件、テーマは来週まで空
+// 送別の候補を API に聞く（FR-3・4・6）。件数は要件の上限 5 件。
+// テーマ（FR-2）はエピソード画面で読み取ったもの。無ければ空で送り、外れにくさだけで並べる
 export async function fetchRecommendations(
   input: FarewellInput,
 ): Promise<RecommendationResponse> {
   const res = await fetch(`${API}/api/farewell/recommendations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...input, theme_ids: [], limit: 5 }),
+    body: JSON.stringify({ ...input, theme_ids: input.theme_ids ?? [], limit: 5 }),
     cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// エピソードの文章から、相手の手がかり（テーマ）を読み取る（FR-2）。
+// 文章は送るだけで保存されない。AIが使えないときも themes は空で返る（extracted: false）
+export async function extractThemes(episode: string): Promise<ThemeResponse> {
+  const res = await fetch(`${API}/api/farewell/themes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ episode }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();

@@ -13,6 +13,7 @@ export interface FarewellInput {
   total_budget: number; // 円
   num_givers: number; // 人
   handover: Handover;
+  theme_ids?: string[]; // FR-2 エピソードから読み取ったテーマ（T001 など）。無ければ省略
 }
 
 export const RELATIONSHIP_OPTIONS: { value: Relationship; label: string }[] = [
@@ -86,6 +87,21 @@ export interface RecommendationResponse {
   results: RecommendationCandidate[];
 }
 
+// ============================================================
+// FR-2 /api/farewell/themes の返り値
+// backend/schemas.py の Theme・ThemeResponse と項目名をそろえる
+// ============================================================
+
+export interface Theme {
+  theme_id: string; // theme_tags.theme_id（T001〜）
+  name: string;
+}
+
+export interface ThemeResponse {
+  themes: Theme[]; // 最大3件。読み取れなければ空
+  extracted: boolean; // AIでの読み取りを実行できたか
+}
+
 // 値（senior など）から日本語ラベル（職場の先輩 など）を引く
 export function labelOf(
   options: { value: string; label: string }[],
@@ -115,13 +131,38 @@ export function parseFarewellInput(
   if (!Number.isInteger(totalBudget) || totalBudget <= 0) return null;
   if (!Number.isInteger(numGivers) || numGivers < 1) return null;
 
+  // テーマは任意の情報なので、形が正しいもの（T＋3桁）だけ残し、不正な値は捨てて先に進む
+  const themeIds = Array.from(
+    new Set(
+      get("theme_ids")
+        .split(",")
+        .filter((t) => /^T\d{3}$/.test(t)),
+    ),
+  );
+
   return {
     relationship: relationship as Relationship,
     preference_knowledge: preference as PreferenceKnowledge,
     total_budget: totalBudget,
     num_givers: numGivers,
     handover: handover as Handover,
+    ...(themeIds.length > 0 && { theme_ids: themeIds }),
   };
+}
+
+// 入力条件を URL のクエリに戻す（parseFarewellInput の逆）。テーマはカンマ区切り
+export function toFarewellQuery(input: FarewellInput): string {
+  const params = new URLSearchParams({
+    relationship: input.relationship,
+    preference_knowledge: input.preference_knowledge,
+    total_budget: String(input.total_budget),
+    num_givers: String(input.num_givers),
+    handover: input.handover,
+  });
+  if (input.theme_ids && input.theme_ids.length > 0) {
+    params.set("theme_ids", input.theme_ids.join(","));
+  }
+  return params.toString();
 }
 
 // ============================================================

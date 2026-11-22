@@ -103,6 +103,9 @@ export default async function FarewellResultsPage({
 
   // ④ 候補を表示する
   const perPerson = calcBudgetPerPerson(input.total_budget, input.num_givers);
+  // エピソードのテーマを渡したのに、合う候補が無く順位に反映されなかったか（要件定義書4.2）
+  const episodeNotUsed =
+    (input.theme_ids?.length ?? 0) > 0 && !data.episode_used;
 
   return (
     <main className={styles.main}>
@@ -138,6 +141,12 @@ export default async function FarewellResultsPage({
           </p>
         )}
 
+        {episodeNotUsed && (
+          <p className={styles.notice}>
+            エピソードの手がかりに合う候補がなかったため、外れにくさだけで並べています。
+          </p>
+        )}
+
         <div className="grid">
           {data.results.map((c) => (
             <RecommendationCard key={c.product_id} candidate={c} />
@@ -147,7 +156,7 @@ export default async function FarewellResultsPage({
         {/* 共有ボタン（FR-7）。共有時はサーバーが候補を計算し直すので、fetchRecommendations と同じ
             theme_ids・limit を渡す（片方だけ変えると、共有ページの候補が画面とずれる） */}
         <div style={{ marginTop: 24 }}>
-          <ShareButton input={{ ...input, theme_ids: [], limit: 5 }} />
+          <ShareButton input={{ ...input, theme_ids: input.theme_ids ?? [], limit: 5 }} />
         </div>
 
         <Link href="/farewell" className={styles.back}>
