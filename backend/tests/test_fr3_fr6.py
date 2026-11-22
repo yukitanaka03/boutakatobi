@@ -121,8 +121,9 @@ class TestFR6Reasons(unittest.TestCase):
 
     def test_理由文の定型文は30字以内(self):
         # 要件定義書 5.2 reason_templates.text。{n} などは実際の値に置き換わるので、長めの値で数える
+        # テーマの理由文の {関係性} は、いちばん長い「取引先の方」で数える
         for key, text in load_templates().items():
-            shown = text.format(n=9999, r=4.5, days=180)
+            shown = text.format(n=9999, r=4.5, days=180, **{"関係性": "取引先の方"})
             self.assertLessEqual(len(shown), 30, key)
 
 
