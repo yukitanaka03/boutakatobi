@@ -5,6 +5,7 @@
 "use client"; // ← ブラウザで動く合図。useState や onClick を使う画面に必要
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import ResultCard from "./ResultCard";
 import { searchGifts, type Gift } from "@/lib/api";
 
@@ -17,6 +18,7 @@ export default function Home() {
   const [priceBand, setPriceBand] = useState(""); // 価格帯（取引先へのお礼）
   const [results, setResults] = useState<Gift[] | null>(null); // 検索結果
   const [error, setError] = useState(""); // つながらないときの文言
+  const router = useRouter(); // 別の画面へ移動するための道具
 
   // ② 検索ボタンの処理（API に聞くので、結果が返るまで待つ＝async/await）
   async function onSearch(e: React.FormEvent) {
@@ -53,14 +55,9 @@ export default function Home() {
         >
           いまの検索
         </button>
-        <button
-          className={mode === "business" ? "on" : ""}
-          onClick={() => {
-            setMode("business");
-            setResults(null);
-          }}
-        >
-          取引先へのお礼
+
+        <button onClick={() => router.push("/farewell")}>
+          送別ギフトを選ぶ
         </button>
       </nav>
 
