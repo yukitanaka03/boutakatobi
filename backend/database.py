@@ -62,3 +62,20 @@ def execute(query: str, params: tuple = ()) -> int:
         return affected
     finally:
         conn.close()
+
+
+def execute_in_transaction(statements: list[tuple[str, tuple]]) -> None:
+    """複数の INSERT などを1つの接続でまとめて実行し、全部成功したときだけ保存（commit）する。
+    途中で1つでも失敗したら、それまでの分も取り消す（rollback）。共有ページの「見出し1行＋候補の行」を
+    半端に残さないため（FR-7）。statements は (SQL, params) の並び。値は params で渡す。"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            for query, params in statements:
+                cur.execute(query, params)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()

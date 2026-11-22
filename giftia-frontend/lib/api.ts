@@ -3,7 +3,14 @@
 // 1週目の lib/sampleGifts.ts は、このファイルに置き換える（ダミーは使わない）。
 // 答えは 配布コード/答え合わせ/frontend/api.ts（自分で埋めてから見る）。
 
-import type { FarewellInput, RecommendationResponse } from "./types";
+import type {
+  FarewellInput,
+  RecommendationResponse,
+  ShareCreateResponse,
+  ShareInput,
+  ShareResponse,
+} from "./types";
+
 // 画面が使う商品の形。1週目と同じ（画面・ResultCard は変えない）
 export type Gift = {
   id: string; // 商品ID（例 G0001）
@@ -66,4 +73,39 @@ export async function fetchRecommendations(
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
+}
+
+// ============================================================
+// FR-7 共有ページ（POST /api/shares・GET /api/shares/{share_id}）
+// ============================================================
+
+// 入力条件を送って共有ページを発行する。候補と理由はサーバー側で計算し直して保存される（画面からは送らない）
+export async function createShare(c: ShareInput): Promise<ShareCreateResponse> {
+  const res = await fetch(`${API}/api/shares`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(c),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// 共有ページの取得結果。「見つからない」「期限切れ」を呼び出し側で出し分けられるように分ける
+export type ShareResult =
+  | { status: "ok"; data: ShareResponse }
+  | { status: "not_found" }
+  | { status: "expired" };
+
+// 共有ページの中身を取る（Server Component から呼ぶ想定）
+export async function getShare(shareId: string): Promise<ShareResult> {
+  // cache: "no-store"：毎回 API に聞く（保存しておくと、期限が過ぎても前の内容が出てしまうため）。
+  // 同じ表示の中で page と generateMetadata から同じ URL で呼んでも、Next.js が1回にまとめる（fetch のメモ化）
+  const res = await fetch(`${API}/api/shares/${encodeURIComponent(shareId)}`, {
+    cache: "no-store",
+  });
+  // 404：ID が無い／422：ID が UUID の形でない → どちらも「見つからない」
+  if (res.status === 404 || res.status === 422) return { status: "not_found" };
+  if (res.status === 410) return { status: "expired" };
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return { status: "ok", data: await res.json() };
 }
