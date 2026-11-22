@@ -49,3 +49,16 @@ def fetch_all(query: str, params: tuple = ()) -> list[dict]:
             return cur.fetchall()
     finally:
         conn.close()
+
+
+def execute(query: str, params: tuple = ()) -> int:
+    """INSERT・UPDATE を実行して保存（commit）し、変わった行数を返す。
+    fetch_all は読むだけで保存（commit）しないので、書き込み用を分けた。値は fetch_all と同じく params で渡す。"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            affected = cur.execute(query, params)
+        conn.commit()
+        return affected
+    finally:
+        conn.close()
