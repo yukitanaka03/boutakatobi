@@ -60,3 +60,107 @@ export function calcBudgetPerPerson(
 ): number {
   return numGivers > 0 ? Math.floor(totalBudget / numGivers) : 0;
 }
+
+// ============================================================
+// FR-3・4・6 /api/farewell/recommendations の返り値
+// backend/schemas.py の Candidate・RecommendationResponse と項目名をそろえる
+// ============================================================
+
+export interface RecommendationCandidate {
+  rank: number;
+  product_id: string;
+  product_name: string;
+  category: string;
+  brand: string | null;
+  price: number;
+  score: number;
+  reasons: string[];
+  caution: string | null;
+}
+
+export interface RecommendationResponse {
+  per_person_budget: number;
+  applied_exclusions: string[];
+  candidate_count: number;
+  episode_used: boolean;
+  results: RecommendationCandidate[];
+}
+
+// 値（senior など）から日本語ラベル（職場の先輩 など）を引く
+export function labelOf(
+  options: { value: string; label: string }[],
+  value: string,
+): string {
+  return options.find((o) => o.value === value)?.label ?? value;
+}
+
+// URL のクエリを入力条件に戻す。欠けている・不正な値があれば null
+export function parseFarewellInput(
+  params: Record<string, string | string[] | undefined>,
+): FarewellInput | null {
+  const get = (key: string) => {
+    const v = params[key];
+    return typeof v === "string" ? v : "";
+  };
+
+  const relationship = get("relationship");
+  const preference = get("preference_knowledge");
+  const handover = get("handover");
+  const totalBudget = Number(get("total_budget"));
+  const numGivers = Number(get("num_givers"));
+
+  if (!RELATIONSHIP_OPTIONS.some((o) => o.value === relationship)) return null;
+  if (!PREFERENCE_OPTIONS.some((o) => o.value === preference)) return null;
+  if (!HANDOVER_OPTIONS.some((o) => o.value === handover)) return null;
+  if (!Number.isInteger(totalBudget) || totalBudget <= 0) return null;
+  if (!Number.isInteger(numGivers) || numGivers < 1) return null;
+
+  return {
+    relationship: relationship as Relationship,
+    preference_knowledge: preference as PreferenceKnowledge,
+    total_budget: totalBudget,
+    num_givers: numGivers,
+    handover: handover as Handover,
+  };
+}
+
+// ============================================================
+// FR-7 共有ページ（backend の schemas.py の ShareCreateResponse・ShareItem・ShareResponse と項目名をそろえる）
+// 片方だけ変えないこと。日時は JSON では文字列（ISO 形式）で届く
+// ============================================================
+
+// 共有ボタンに渡す入力条件。FarewellInput に、テーマ（theme_id だけ。エピソード原文は送らない）と件数を足したもの
+export interface ShareInput extends FarewellInput {
+  theme_ids?: string[];
+  limit?: number; // 3〜5
+}
+
+export interface ShareCreateResponse {
+  share_id: string;
+  share_path: string; // "/share/{share_id}"。画面側で window.location.origin とつなげて完全な URL にする
+  expires_at: string; // 閲覧期限（発行から30日）
+}
+
+export interface ShareItem {
+  rank: number;
+  product_id: string;
+  product_name: string;
+  category: string;
+  brand: string | null;
+  price: number; // 円
+  score: number; // 0〜1
+  reasons: string[]; // 共有した時点の理由文
+}
+
+export interface ShareResponse {
+  share_id: string;
+  created_at: string;
+  expires_at: string;
+  relationship: Relationship;
+  preference_knowledge: PreferenceKnowledge;
+  total_budget: number;
+  num_givers: number;
+  per_person_budget: number;
+  handover: Handover;
+  items: ShareItem[];
+}

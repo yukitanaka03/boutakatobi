@@ -16,5 +16,5 @@ CREATE TABLE IF NOT EXISTS event_logs (
 
 -- share_id → share_lists の外部キーは、今は付けない。
 -- share_lists は FR-7（共有）で作るテーブルでまだ無いため、付けるとこの CREATE が失敗する。
--- FR-7 で share_lists を作った後に、次を実行して外部キーを足す（これも班で合意してから人が実行する）。
+-- 次の文は 003_create_share_tables.sql の末尾で share_lists を作った後に実行する（ここでは実行しない）。
 -- ALTER TABLE event_logs ADD CONSTRAINT fk_event_share FOREIGN KEY (share_id) REFERENCES share_lists(share_id);
