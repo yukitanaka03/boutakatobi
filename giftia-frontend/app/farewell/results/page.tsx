@@ -1,5 +1,6 @@
 import Link from "next/link";
 import RecommendationCard from "@/components/RecommendationCard";
+import ShareButton from "@/components/ShareButton";
 import { fetchRecommendations } from "@/lib/api";
 import {
   parseFarewellInput,
@@ -141,6 +142,12 @@ export default async function FarewellResultsPage({
           {data.results.map((c) => (
             <RecommendationCard key={c.product_id} candidate={c} />
           ))}
+        </div>
+
+        {/* 共有ボタン（FR-7）。共有時はサーバーが候補を計算し直すので、fetchRecommendations と同じ
+            theme_ids・limit を渡す（片方だけ変えると、共有ページの候補が画面とずれる） */}
+        <div style={{ marginTop: 24 }}>
+          <ShareButton input={{ ...input, theme_ids: [], limit: 5 }} />
         </div>
 
         <Link href="/farewell" className={styles.back}>
