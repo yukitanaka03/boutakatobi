@@ -60,3 +60,44 @@ export function calcBudgetPerPerson(
 ): number {
   return numGivers > 0 ? Math.floor(totalBudget / numGivers) : 0;
 }
+
+// ============================================================
+// FR-7 共有ページ（backend の schemas.py の ShareCreateResponse・ShareItem・ShareResponse と項目名をそろえる）
+// 片方だけ変えないこと。日時は JSON では文字列（ISO 形式）で届く
+// ============================================================
+
+// 共有ボタンに渡す入力条件。FarewellInput に、テーマ（theme_id だけ。エピソード原文は送らない）と件数を足したもの
+export interface ShareInput extends FarewellInput {
+  theme_ids?: string[];
+  limit?: number; // 3〜5
+}
+
+export interface ShareCreateResponse {
+  share_id: string;
+  share_path: string; // "/share/{share_id}"。画面側で window.location.origin とつなげて完全な URL にする
+  expires_at: string; // 閲覧期限（発行から30日）
+}
+
+export interface ShareItem {
+  rank: number;
+  product_id: string;
+  product_name: string;
+  category: string;
+  brand: string | null;
+  price: number; // 円
+  score: number; // 0〜1
+  reasons: string[]; // 共有した時点の理由文
+}
+
+export interface ShareResponse {
+  share_id: string;
+  created_at: string;
+  expires_at: string;
+  relationship: Relationship;
+  preference_knowledge: PreferenceKnowledge;
+  total_budget: number;
+  num_givers: number;
+  per_person_budget: number;
+  handover: Handover;
+  items: ShareItem[];
+}

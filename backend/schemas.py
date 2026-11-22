@@ -1,6 +1,7 @@
 # schemas.py — /api/farewell/recommendations の入力と出力の形（要件定義書 4.3）
 # 画面（lib/types.ts）と項目名をそろえる。片方だけ変えないこと。
 
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -65,3 +66,41 @@ class EventRequest(BaseModel):
 
 class EventResponse(BaseModel):
     ok: bool  # 記録できたか
+
+
+# ── /api/shares（共有ページ FR-7・DR-5・DR-6）の入力と出力 ──────────────
+# 発行の入力は RecommendationRequest をそのまま使う（新しい型は作らない）。
+# サーバー側で候補を計算し直して保存する。画面から理由文は受け取らない
+# （ログインなしで誰でも見られるページなので、書き換えた文言を保存させないため）。
+
+
+class ShareCreateResponse(BaseModel):
+    share_id: str
+    # "/share/{share_id}"。API は画面の URL（オリジン）を知らないので、画面側で window.location.origin とつなげる
+    share_path: str
+    expires_at: datetime  # 閲覧期限（発行から30日）
+
+
+class ShareItem(BaseModel):
+    rank: int
+    product_id: str
+    product_name: str
+    category: str
+    brand: str | None = None
+    price: int
+    score: float
+    reasons: list[str]  # 共有した時点の理由文（後で商品属性が変わっても変わらない DR-6）
+
+
+class ShareResponse(BaseModel):
+    # relationship・preference_knowledge・handover は RecommendationRequest と同じ値だけ（片方だけ変えないこと）
+    share_id: str
+    created_at: datetime
+    expires_at: datetime
+    relationship: Literal["senior", "peer", "boss", "junior", "client"]
+    preference_knowledge: Literal["low", "mid", "high"]
+    total_budget: int
+    num_givers: int
+    per_person_budget: int
+    handover: Literal["hand", "ship"]
+    items: list[ShareItem]

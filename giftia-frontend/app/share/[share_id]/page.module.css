@@ -1,0 +1,100 @@
+/* app/share/[share_id]/page.module.css — 共有ページの見た目（FR-7）。入力画面（app/farewell）とそろえる */
+.main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+
+.panel {
+  padding: 32px 28px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f3355;
+}
+
+.lead {
+  margin: 8px 0 24px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #4a5568;
+}
+
+.conditions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  font-size: 14px;
+  background: #eef1f6;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+}
+
+.conditions dt {
+  font-weight: 600;
+  color: #1f3355;
+}
+
+.conditions dd {
+  margin: 0;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.rank {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.name {
+  margin: 4px 0;
+  font-size: 18px;
+}
+
+.meta {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--sub);
+}
+
+.reasons {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.link {
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.expires {
+  margin: 20px 0 0;
+  font-size: 13px;
+  color: var(--sub);
+}
