@@ -15,6 +15,9 @@ export default function RecommendationCard({
         {candidate.category}
       </p>
       <p className="price">{candidate.price.toLocaleString("ja-JP")}円</p>
+      {candidate.delivery_days != null && (
+        <p className="meta">配送日数：{candidate.delivery_days}日</p>
+      )}
 
       {candidate.reasons.length > 0 && (
         <ul className={styles.reasons}>

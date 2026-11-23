@@ -74,6 +74,7 @@ export interface RecommendationCandidate {
   category: string;
   brand: string | null;
   price: number;
+  delivery_days: number | string | null; // 配送日数（通常検索の deliveryDays と同じ値）
   score: number;
   reasons: string[];
   caution: string | null;

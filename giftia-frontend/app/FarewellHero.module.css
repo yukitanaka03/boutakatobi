@@ -1,0 +1,242 @@
+.hero {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px 32px;
+  align-items: center;
+  margin: 8px 0 40px;
+  padding: 40px;
+  border-radius: 20px;
+  background: #fffdf9;
+  border: 1px solid #e8dfcf;
+  box-shadow: 0 12px 32px rgba(35, 58, 94, 0.06);
+}
+
+/* 機能名：NEW ＋ だからコレ。｜理由つきギフト選び */
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.badge {
+  align-self: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #b8893a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.name {
+  color: #b8893a;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.subName {
+  color: #666;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.title {
+  margin: 0 0 12px;
+  color: #233a5e;
+  font-size: clamp(24px, 3.2vw, 34px);
+  line-height: 1.4;
+}
+
+.titleLine {
+  display: inline-block;
+}
+
+.lead {
+  margin: 0 0 20px;
+  color: #444;
+  line-height: 1.8;
+}
+
+.leadLine {
+  display: inline-block;
+}
+
+/* シーン：送別のみ選択中、他は準備中 */
+.scenes {
+  margin: 0 0 24px;
+}
+.scenesLabel {
+  margin: 0 0 8px;
+  color: #666;
+  font-size: 13px;
+  font-weight: 700;
+}
+.sceneList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sceneOn,
+.sceneOff {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.sceneOn {
+  border: 2px solid #233a5e;
+  background: #eef1f5;
+  color: #233a5e;
+  cursor: default;
+}
+.sceneOff {
+  border: 2px dashed #c9c2b4;
+  background: transparent;
+  color: #999;
+  cursor: default;
+}
+.soon {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #ece7dc;
+  color: #8a7f6a;
+  font-size: 11px;
+}
+/* 画面には出さず、読み上げソフトにだけ伝える文字 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.cta {
+  display: inline-block;
+  padding: 16px 36px;
+  box-shadow: 0 4px 12px rgba(35, 58, 94, 0.18);
+  border-radius: 12px;
+  background: #233a5e;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(35, 58, 94, 0.3);
+}
+.cta:focus-visible {
+  outline: 3px solid #b8893a;
+  outline-offset: 3px;
+}
+
+/* 見本カード */
+.sample {
+  padding: 20px;
+  border: 1px solid #e6dfd1;
+  border-radius: 16px;
+  background: #fff;
+}
+.sampleLabel {
+  margin: 0 0 8px;
+  color: #888;
+  font-size: 12px;
+}
+.sampleRank {
+  margin: 0;
+  color: #b8893a;
+  font-weight: 700;
+}
+.sampleName {
+  margin: 4px 0 0;
+  color: #233a5e;
+  font-size: 17px;
+  font-weight: 700;
+}
+.sampleReasonTitle {
+  margin: 14px 0 0;
+  color: #b8893a;
+  font-size: 13px;
+  font-weight: 800;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef1f5;
+  color: #233a5e;
+  font-size: 13px;
+}
+
+/* 3ステップ */
+.steps {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.stepNo {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #233a5e;
+  color: #fff;
+  font-weight: 700;
+}
+.stepTitle {
+  margin: 0;
+  color: #233a5e;
+  font-weight: 700;
+}
+.stepText {
+  margin: 2px 0 0;
+  color: #555;
+  font-size: 14px;
+}
+
+/* page.tsx の「キーワードで探す」見出し */
+.searchTitle {
+  margin: 0 0 12px;
+  color: #233a5e;
+  font-size: 18px;
+}
+
+/* スマホ幅では1列に並べる */
+@media (max-width: 768px) {
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+  .steps {
+    grid-template-columns: 1fr;
+  }
+}
