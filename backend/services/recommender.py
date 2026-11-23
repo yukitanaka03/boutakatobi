@@ -36,7 +36,7 @@ def price_band(total_budget: int) -> tuple[int, int]:
 
 # ── 1. 候補の取得（DB） ─────────────────────────────────────
 CANDIDATE_SQL = """
-SELECT p.product_id, p.product_name, p.category, p.brand, p.price, p.rating, p.review_count, p.stock,
+SELECT p.product_id, p.product_name, p.category, p.brand, p.price, p.rating, p.review_count, p.stock, p.delivery_days,
        a.preference_dependency, a.scent_level, a.room_temp_ok, a.individually_wrapped,
        a.shelf_life_days, a.carry_size, a.shareable, a.workplace_friendly, a.style,
        COALESCE(s.sobetsu_orders, 0) AS sobetsu_orders,

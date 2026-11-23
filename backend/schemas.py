@@ -25,6 +25,7 @@ class Candidate(BaseModel):
     category: str
     brand: str | None = None
     price: int
+    delivery_days: int | str | None = Field(default=None, description="配送日数（products.delivery_days。通常検索と同じ値）")
     score: float
     reasons: list[str]
     caution: str | None = None
