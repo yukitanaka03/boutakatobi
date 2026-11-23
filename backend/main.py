@@ -14,12 +14,13 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import fetch_all
-from routers import events, farewell, shares
+from routers import events, farewell, farewell_themes, shares
 
 load_dotenv()  # .env を読む（DB の接続情報・CORS の許可）
 
 app = FastAPI(title="Giftia Search API（2週目）")
 app.include_router(farewell.router)  # 送別の候補（POST /api/farewell/recommendations）
+app.include_router(farewell_themes.router)  # エピソードからのテーマ抽出（POST /api/farewell/themes）
 app.include_router(events.router)  # 利用ログ（POST /api/events）FR-9
 app.include_router(shares.router)  # 共有ページ（POST /api/shares・GET /api/shares/{share_id}）FR-7
 
@@ -94,3 +95,4 @@ def to_gift(r: dict) -> dict:
         "deliveryDays": r["delivery_days"],
         "salesCount": r["sales_count"],
     }
+

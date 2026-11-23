@@ -68,6 +68,24 @@ class EventRequest(BaseModel):
 class EventResponse(BaseModel):
     ok: bool  # 記録できたか
 
+# ============================================================
+# FR-2 /api/farewell/themes（エピソードからのテーマ抽出）
+# 項目名は frontend の lib/types.ts の Theme・ThemeResponse とそろえる
+# ============================================================
+
+
+class ThemeRequest(BaseModel):
+    episode: str = Field(default="", max_length=300)  # 原文。保存しない
+
+
+class Theme(BaseModel):
+    theme_id: str  # theme_tags.theme_id（T001〜）
+    name: str
+
+
+class ThemeResponse(BaseModel):
+    themes: list[Theme]  # 最大3件。読み取れなければ空
+    extracted: bool  # AIでの読み取りを実行できたか（失敗・キー無し・空文は false）
 
 # ── /api/shares（共有ページ FR-7・DR-5・DR-6）の入力と出力 ──────────────
 # 発行の入力は RecommendationRequest をそのまま使う（新しい型は作らない）。

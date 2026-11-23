@@ -48,7 +48,8 @@ export default function FarewellInputForm() {
       handover: form.handover!,
     });
     logEvent("input_submit");
-    router.push(`/farewell/results?${params.toString()}`);
+    // 次はエピソード入力（任意）。テーマを読み取ってから候補へ進む（FR-2）
+    router.push(`/farewell/episode?${params.toString()}`);
   };
 
   return (
@@ -174,10 +175,10 @@ export default function FarewellInputForm() {
         disabled={!isComplete}
         className={styles.button}
       >
-        候補を見る
+        次へ
       </button>
       {!isComplete && (
-        <p className={styles.hint}>5つの項目をすべて選ぶと候補を見られます</p>
+        <p className={styles.hint}>5つの項目をすべて選ぶと次へ進めます</p>
       )}
     </div>
   );
